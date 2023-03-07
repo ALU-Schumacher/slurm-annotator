@@ -1,0 +1,9 @@
+{
+  "frequency": 30,
+  "keywords": [
+    "subject",
+    "voms"
+  ],
+  "WorkDir": "/pool_home/arc6/session/",
+  "info_file": "job_info.json"
+}
