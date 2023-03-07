@@ -5,7 +5,7 @@ After=multi-user.target
 [Service]
 Type=simple
 Restart=always
-ExecStart=/bin/python /bin/slurm-annotator.py
+ExecStart=/bin/python /usr/bin/slurm-annotator.py
 
 [Install]
 WantedBy=multi-user.target

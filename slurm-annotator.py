@@ -87,7 +87,7 @@ def main(config):
 
 if __name__ == "__main__":
    try:
-      with open('config.json', 'r') as f:
+      with open('/etc/slurm-annotator/config.json', 'r') as f:
          config = json.load(f)
    except:
       print("ERROR:: cannot read config file")
