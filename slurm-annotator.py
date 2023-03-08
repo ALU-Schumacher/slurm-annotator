@@ -1,50 +1,57 @@
-#!/usr/bin/env python
-import commands
+#!/usr/bin/python3
+import subprocess
 import json
 import os.path
 import time
 import json
+import logging
 
 def get_job_list():
    """Return list of arc jobs in state INLRMS."""
    logging.debug('Getting list of arc jobs')
-   jobs_text = commands.getstatusoutput('/sbin/arcctl job list -s INLRMS')[1]
    jobs = []
-   for j in jobs_text.split('\n'):
-      if "ERROR" in j:
-         continue
-      jobs.append(j)
+   result = subprocess.run(['/sbin/arcctl', 'job', 'list' , '-s', 'INLRMS'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+   if result.returncode == 0:
+      jobs = result.stdout.decode("utf-8").split()
+   else:
+      logging.error(result.stderr)
    return jobs
 
 
-def create_comments_dict(jobs,config):
+def get_comment(job,config):
    """
-   Return dict with slurm job ids as keys and pseudo json containing all keywords 
-   and its corresponding info as comment string as value
+   Return slurm job id and dict containing all keywords defined in the config file 
+   and its corresponding info 
    """
    logging.debug('Creating comments for each arc job')
    comments = {}
-   for job in jobs:
-      if os.path.isfile("{0}{1}/{2}".format(config['WorkDir'],job,config['info_file'])):
-         continue
-      my_dict = {}
-      try:
-         job_info = commands.getstatusoutput('/sbin/arcctl job attr {0}'.format(job))[1]
-         attr = job_info.split("\n")
-         for a in attr:
+   if os.path.isfile("{0}{1}/{2}".format(config['WorkDir'],job,config['info_file'])):
+      return None, None   
+   my_dict = {}
+   try:
+      attr = []
+      result = subprocess.run(['/sbin/arcctl', 'job', 'attr' , job], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      if result.returncode == 0:
+         attr = result.stdout.decode("utf-8").split('\n')
+      else:
+         logging.error(result.stderr)
+      for a in attr:
+         try:
             my_key = a.split(':', 1)[0].replace(" ","")
             my_value = a.split(':', 1)[1]
-            if my_value.startswith(" "):
-               my_value = my_value[1:]
-            if my_key in config['keywords']:
-               my_dict[my_key] = my_value
-            if my_key == "localid":
-               jobid = int(my_value)
-         logging.debug(job, my_dict)
-         comments[jobid] = my_dict
-      except:
-          logging.error("Attr infos could not be retrieved for job: ", job)
-   return comments
+         except:
+            continue
+         if my_value.startswith(" "):
+            my_value = my_value[1:]
+         if my_key in config['keywords']:
+            my_dict[my_key] = my_value
+         if my_key == "localid":
+            jobid = int(my_value)
+      logging.debug(job, my_dict)
+   except:
+      logging.error("Attr infos could not be retrieved for job: ", job)
+   return jobid, my_dict
+
 
 
 def upload_dict_to_job(comment,jobid):
@@ -54,23 +61,26 @@ def upload_dict_to_job(comment,jobid):
    #convert " -> ', since comment field does not allow " 
    nice_dict = json.dumps(comment)
    nice_dict = nice_dict.replace('"',"'")
-   #print(nice_dict)
    logging.debug('/bin/scontrol update JobId={0} comment="{1}"'.format(jobid, nice_dict))
-   out,err = commands.getstatusoutput('/bin/scontrol update JobId={0} comment="{1}"'.format(jobid,nice_dict))
-   if err:
-      logging.error(err)
-   return out
+   out, err = None,None
+   result = subprocess.run(['/bin/scontrol', 'update', 'JobId={0}'.format(jobid), 'comment="{0}"'.format(nice_dict)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+   if result.returncode:
+      logging.error(result.stderr)
+   return result.returncode
 
 
-def upload_comments_all_jobs(comments, config):
+def upload_comments_all_jobs(jobs, config):
    """
    loops over all key value pairs of the comments dict, tries to upload the new comment
    and stores the comment into a json file in the WorkDir, such that upload is done
    only once
    """
-   for jobid, comment in comments.items():
-      print(jobid, comment)    
+   for job in jobs:
+      jobid, comment = get_comment(job,config)
+      if jobid == None:
+         continue
       try:
+         logging.info("Upload data {0} form arc job: {1} to slurm job {2}".format(job, jobid,comment))
          out = upload_dict_to_job(comment,jobid)
          if int(out) == 0:
             with open("{0}{1}/{2}".format(config['WorkDir'],job,config['info_file']), 'w') as f:
@@ -84,11 +94,9 @@ def main(config):
    generates list of arc jobs, creates dict with jobids and new comments
    then uploads the pseudo json to slurm 
    """
-   jobs = get_job_list()#[:5]
-   comments = create_comments_dict(jobs, config)
-   #print(json.dumps(comments,indent=2))
-   upload_comments_all_jobs(comments, config)   
-
+   jobs = get_job_list()
+   upload_comments_all_jobs(jobs, config)   
+   logging.info('Successfully finished slurm-annotator run!')
 
 if __name__ == "__main__":
    try:
@@ -100,7 +108,10 @@ if __name__ == "__main__":
                        format='%(asctime)s - %(levelname)s - %(message)s', 
                        level=config['loglevel']
                        )
-   logging.debug('Successfully started slurm-annotator')
+   logging.info('Successfully started slurm-annotator')
    while True:
       main(config)
       time.sleep(config['frequency'])
+
+
+
