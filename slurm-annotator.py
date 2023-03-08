@@ -3,10 +3,11 @@ import commands
 import json
 import os.path
 import time
-
+import json
 
 def get_job_list():
    """Return list of arc jobs in state INLRMS."""
+   logging.debug('Getting list of arc jobs')
    jobs_text = commands.getstatusoutput('/sbin/arcctl job list -s INLRMS')[1]
    jobs = []
    for j in jobs_text.split('\n'):
@@ -21,6 +22,7 @@ def create_comments_dict(jobs,config):
    Return dict with slurm job ids as keys and pseudo json containing all keywords 
    and its corresponding info as comment string as value
    """
+   logging.debug('Creating comments for each arc job')
    comments = {}
    for job in jobs:
       if os.path.isfile("{0}{1}/{2}".format(config['WorkDir'],job,config['info_file'])):
@@ -38,9 +40,10 @@ def create_comments_dict(jobs,config):
                my_dict[my_key] = my_value
             if my_key == "localid":
                jobid = int(my_value)
+         logging.debug(job, my_dict)
          comments[jobid] = my_dict
       except:
-          print("Attr infos could not be retrieved for job: ", job)
+          logging.error("Attr infos could not be retrieved for job: ", job)
    return comments
 
 
@@ -51,9 +54,11 @@ def upload_dict_to_job(comment,jobid):
    #convert " -> ', since comment field does not allow " 
    nice_dict = json.dumps(comment)
    nice_dict = nice_dict.replace('"',"'")
-   print(nice_dict)
-   print('/bin/scontrol update JobId={0} comment="{1}"'.format(jobid, nice_dict))
+   #print(nice_dict)
+   logging.debug('/bin/scontrol update JobId={0} comment="{1}"'.format(jobid, nice_dict))
    out,err = commands.getstatusoutput('/bin/scontrol update JobId={0} comment="{1}"'.format(jobid,nice_dict))
+   if err:
+      logging.error(err)
    return out
 
 
@@ -71,7 +76,7 @@ def upload_comments_all_jobs(comments, config):
             with open("{0}{1}/{2}".format(config['WorkDir'],job,config['info_file']), 'w') as f:
                json.dump(comment, f)
       except:
-          print("Attr infos could not be retrieved for job: ", job)
+          logging.error("Could not write info file for job: ", job)
 
 
 def main(config):
@@ -91,8 +96,11 @@ if __name__ == "__main__":
          config = json.load(f)
    except:
       print("ERROR:: cannot read config file")
-
+   logging.basicConfig(filename=config['logfile'], 
+                       format='%(asctime)s - %(levelname)s - %(message)s', 
+                       level=config['loglevel']
+                       )
+   logging.debug('Successfully started slurm-annotator')
    while True:
       main(config)
-      time.sleep(config['frequency'])    
-
+      time.sleep(config['frequency'])
