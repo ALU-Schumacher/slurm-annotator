@@ -2,7 +2,8 @@
   "frequency": 30,
   "keywords": [
     "subject",
-    "voms"
+    "voms",
+    "headnode"
   ],
   "WorkDir": "/pool_home/arc6/session/",
   "info_file": "job_info.json",
