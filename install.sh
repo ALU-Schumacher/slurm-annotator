@@ -1,4 +1,5 @@
 mkdir /etc/slurm-annotator
+mkdir /var/log/slurm-annotator
 export annotator_dir=$PWD
 ln -s $annotator_dir/config.json /etc/slurm-annotator/config.json
 ln -s $annotator_dir/slurm-annotator.py /usr/bin/slurm-annotator

@@ -7,6 +7,6 @@
   ],
   "WorkDir": "/pool_home/arc6/session/",
   "info_file": "job_info.json",
-  "logfile": "/var/log/slurm/slurm-annotator.log",
+  "logfile": "/var/log/slurm-annotator/slurm-annotator.log",
   "loglevel": "INFO"
 }
