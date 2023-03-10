@@ -150,3 +150,21 @@ starttime                       : 20230310005449Z
 rerun                           : 0
 ```
 By adding any of the keywords above to the slurm-annotator config file to the "keywords" list, it the given key:value pair will be added to the slurm comment field. 
+
+
+# Example slurm job
+
+Listing the detailed job info of a slurm job, after annotating the commend field with the default settings (`"keywords": ["subject", "voms", "headnode"]`) would looks as follows:
+
+```
+scontrol show job 4234634
+JobId=4234634 JobName=arc_pilot
+   UserId=atlxxx(1234) GroupId=atlxxx(5678) MCS_label=N/A
+   Priority=1 Nice=50 Account=atlxxx QOS=normal
+   ... 
+   Comment="{'subject': '/DC=ch/DC=cern/OU=Organic Units ...', 
+             'headnode': 'gsiftp://arc.<domain>:<port>/jobs', 
+             'voms': '/atlas/Role=test'}" 
+   ...
+```
+Since slurm does not allow to put double quote into the comment field, the keys and the values are placed in single quotes. If you would like to extract the comment field as a json, you need to replace the single quotes first.
