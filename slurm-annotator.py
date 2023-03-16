@@ -104,9 +104,9 @@ if __name__ == "__main__":
                        level=config['loglevel']
                        )
    logging.info('Successfully started slurm-annotator')
-   #while True:
-   main(config)
-   #time.sleep(config['frequency'])
+   while True:
+      main(config)
+      time.sleep(config['frequency'])
 
 
 
