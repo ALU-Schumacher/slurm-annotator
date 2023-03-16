@@ -20,38 +20,33 @@ def get_job_list():
 
 def get_comment(job,config):
    """
-   Return slurm job id and dict containing all keywords defined in the config file 
-   and its corresponding info 
+      Return slurm job id and dict containing all keywords defined in the config file 
+      and its corresponding info 
    """
    logging.debug('Creating comments for each arc job')
    comments = {}
    if os.path.isfile("{0}{1}/{2}".format(config['WorkDir'],job,config['info_file'])):
-      return None, None   
+       return None, None   
+   data = None
    my_dict = {}
    try:
-      attr = []
-      result = subprocess.run(['/sbin/arcctl', 'job', 'attr' , job], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      if result.returncode == 0:
-         attr = result.stdout.decode("utf-8").split('\n')
-      else:
-         logging.error(result.stderr)
-      for a in attr:
-         try:
-            my_key = a.split(':', 1)[0].replace(" ","")
-            my_value = a.split(':', 1)[1]
-         except:
-            continue
-         if my_value.startswith(" "):
-            my_value = my_value[1:]
-         if my_key in config['keywords']:
-            my_dict[my_key] = my_value
-         if my_key == "localid":
-            jobid = int(my_value)
-      logging.debug(job, my_dict)
+       attr = {}
+       with open('{0}/job.{1}.local'.format(config['jobstatusDir'],job), 'r') as reader:
+           data = reader.read()
    except:
-      logging.error("Attr infos could not be retrieved for job: ", job)
-   return jobid, my_dict
-
+       logging.error(".local file not found for Job: {0}".format(job))
+   # create voms dict with all voms attributes
+   for line in data.split('\n'):
+       schar = line.find("=")
+       k = line[:schar]
+       v = line[schar+1:]
+       if k not in attr.keys():
+           attr[k]=v
+   # select attributes by keywords from config 
+   for key in config["keywords"]:
+       if key in attr.keys():
+           my_dict[key] = attr[key]
+   return attr['localid'], my_dict
 
 
 def upload_dict_to_job(comment,jobid):
@@ -109,9 +104,9 @@ if __name__ == "__main__":
                        level=config['loglevel']
                        )
    logging.info('Successfully started slurm-annotator')
-   while True:
-      main(config)
-      time.sleep(config['frequency'])
+   #while True:
+   main(config)
+   #time.sleep(config['frequency'])
 
 
 

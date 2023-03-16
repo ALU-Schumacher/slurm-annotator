@@ -6,6 +6,7 @@
     "headnode"
   ],
   "WorkDir": "/pool_home/arc6/session/",
+  "jobstatusDir": "/var/spool/nordugrid/jobstatus/",
   "info_file": "job_info.json",
   "logfile": "/var/log/slurm-annotator/slurm-annotator.log",
   "loglevel": "INFO"
